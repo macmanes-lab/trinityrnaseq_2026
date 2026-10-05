@@ -129,7 +129,7 @@ main: {
         print STDERR "WARNING: note, there were $num_unrecognized_iworm_contig_names inchworm contig names in the SAM file that were ignored due to the inchworm contig accession not being recognized.\n";
     }
     
-    foreach my $pairing (reverse sort {$paired_iworm_contigs{$a}<=>$paired_iworm_contigs{$b}} keys %paired_iworm_contigs) {
+    foreach my $pairing (sort {$paired_iworm_contigs{$b}<=>$paired_iworm_contigs{$a} or $a cmp $b} keys %paired_iworm_contigs) {
 
         my ($iworm_acc_A, $iworm_acc_B) = split(/\t/, $pairing);
       

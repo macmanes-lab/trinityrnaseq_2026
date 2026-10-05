@@ -57,7 +57,10 @@ class Compact_graph_pruner:
         bubble_node_lists = self._get_bubbles(tgraph, max_bubble_node_length)
 
         for bubble_node_list in bubble_node_lists:
-            # TODO: should sort by expression, select representative node based on highest expr
+            # Keep the node in the most isoforms; ties go to the highest loc id. The
+            # list comes from a set of nodes hashed by id(), so popping it unsorted
+            # picked the allele by memory address.
+            bubble_node_list.sort(key=lambda n: (len(n.get_transcripts()), n.get_loc_id()))
             repr_node = bubble_node_list.pop()
             for sister_bubble_node in bubble_node_list:
                 repr_node.add_transcripts(sister_bubble_node.get_transcripts())
