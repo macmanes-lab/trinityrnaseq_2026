@@ -1,5 +1,11 @@
 
 public class SimplePathNodeEdge {
+	private final int _stable_hash = StableHash.next();
+
+	public int hashCode() {
+		return _stable_hash;
+	}
+
 
 	float weight;
 	String from_PathNodeID;

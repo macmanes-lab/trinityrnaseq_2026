@@ -2,6 +2,12 @@ import java.util.*;
 
 
 public class PathWithOrig {
+	private final int _stable_hash = StableHash.next();
+
+	public int hashCode() {
+		return _stable_hash;
+	}
+
 
 	private String pathNodeID = null;
 	private List<Integer> vertex_id_list;

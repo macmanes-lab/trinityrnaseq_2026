@@ -6,6 +6,12 @@ import edu.uci.ics.jung.graph.DirectedSparseGraph;
 
 
 public class Path {
+	private final int _stable_hash = StableHash.next();
+
+	public int hashCode() {
+		return _stable_hash;
+	}
+
 
 	private List<Integer> vertex_id_listing;
 	

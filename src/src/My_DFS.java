@@ -6,6 +6,12 @@ import edu.uci.ics.jung.graph.DirectedSparseGraph;
 
 public class My_DFS
 {
+	private final int _stable_hash = StableHash.next();
+
+	public int hashCode() {
+		return _stable_hash;
+	}
+
 	private Map<SeqVertex,Integer> _colors;
 	public final static int WHITE = 0;
 	public final static int BLACK = 1;

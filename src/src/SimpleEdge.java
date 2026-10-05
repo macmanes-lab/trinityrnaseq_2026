@@ -1,5 +1,11 @@
 
 public class SimpleEdge {
+	private final int _stable_hash = StableHash.next();
+
+	public int hashCode() {
+		return _stable_hash;
+	}
+
 	public double _wei;
 	public boolean _isInCircle;
 	protected int _numberOfLoopsInvolved;

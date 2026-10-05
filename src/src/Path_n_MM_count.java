@@ -4,6 +4,12 @@ import java.util.Vector;
 
 
 public class Path_n_MM_count {
+	private final int _stable_hash = StableHash.next();
+
+	public int hashCode() {
+		return _stable_hash;
+	}
+
 
 	Integer mismatch_count = 0;
 	Vector<Integer> path;

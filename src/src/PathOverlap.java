@@ -2,6 +2,12 @@
 import java.util.*;
 
 public class PathOverlap {
+	private final int _stable_hash = StableHash.next();
+
+	public int hashCode() {
+		return _stable_hash;
+	}
+
 
 	
 	List<Integer> path_A;

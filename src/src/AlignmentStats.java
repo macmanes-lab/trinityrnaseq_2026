@@ -2,6 +2,12 @@ import jaligner.Alignment;
 import java.util.*;
 
 public class AlignmentStats {
+	private final int _stable_hash = StableHash.next();
+
+	public int hashCode() {
+		return _stable_hash;
+	}
+
 
 	boolean local_DEBUG = false;  //FIXME: use a debuglevel var that transcends all code
 	
