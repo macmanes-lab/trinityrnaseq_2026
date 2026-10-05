@@ -8,7 +8,6 @@ import os, sys, re
 import logging
 import argparse
 import collections
-import numpy
 import time
 
 import TGraph
@@ -196,8 +195,15 @@ class Gene_splice_modeler:
                 similarity_matrix[ i ][ i ] = -1
             
             ## find best pair
-            best_pair_idx = int(numpy.argmax(similarity_matrix))
+            # first maximum in row-major order, as numpy.argmax gave
             num_alignments = len(similarity_matrix)
+            best_pair_idx = 0
+            best_val = None
+            for i, row in enumerate(similarity_matrix):
+                for j, val in enumerate(row):
+                    if best_val is None or val > best_val:
+                        best_val = val
+                        best_pair_idx = i * num_alignments + j
             best_pair_idx_1 = int(best_pair_idx / num_alignments)
             best_pair_idx_2 = best_pair_idx % num_alignments
             
@@ -235,7 +241,7 @@ class Gene_splice_modeler:
         """
         
         num_alignments = len(alignments_list)
-        sim_matrix = numpy.zeros( (num_alignments, num_alignments), dtype='int_' )
+        sim_matrix = [[0] * num_alignments for _ in range(num_alignments)]
 
         for i in range(0, num_alignments-1):
             align_i = alignments_list[i]

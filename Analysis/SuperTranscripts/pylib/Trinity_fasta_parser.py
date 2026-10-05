@@ -8,7 +8,6 @@ import os, sys, re
 import logging
 import argparse
 import collections
-import numpy
 import time
 import hashlib
 
