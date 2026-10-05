@@ -4,6 +4,23 @@
 
 
 #include "aligns/KmerAlignCore.h"
+#include <cstdlib>
+#include <cstring>
+#include <unordered_map>
+
+// A dense table holds one slot per possible k-mer (4^12 for GraphFromFasta's
+// 12-mers, ~450 MB). For the few dozen contigs of a Trinity phase-2 component,
+// allocating, zeroing, sorting and freeing it was most of the runtime, so small
+// inputs get a hash table instead. CHRYSALIS_KMER_TABLE=dense|sparse forces one.
+static bool UseSparseTable(long long positions, int bound)
+{
+    const char * mode = getenv("CHRYSALIS_KMER_TABLE");
+    if (mode != NULL && strcmp(mode, "dense") == 0)
+        return false;
+    if (mode != NULL && strcmp(mode, "sparse") == 0)
+        return true;
+    return positions < bound / 16;
+}
 
 KmerAlignCore::KmerAlignCore() 
 {
@@ -51,9 +68,19 @@ void KmerAlignCore::AddData(const vecDNAVector & bases, const vecNumVector & tag
     int size = m_pTrans->GetSize(); // set to 12
     
     
+    long long positions = 0;
+    for (j=0; j<(int)bases.size(); j++) {
+        if ((int)bases[j].size() >= size)
+            positions += (int)bases[j].size() - size + 1;
+    }
+    m_table.Materialize(UseSparseTable(positions, m_pTrans->GetBoundValue()));
+    const bool sparse = m_table.IsSparse();
+
     svec<int> counts;
+    std::unordered_map<int, int> sparse_counts;
     cerr << "Counting k-mers..." << endl;
-    counts.resize(m_pTrans->GetBoundValue(), 0);
+    if (!sparse)
+        counts.resize(m_pTrans->GetBoundValue(), 0);
     
     for (j=0; j<(int)bases.size(); j++) {
 
@@ -78,8 +105,12 @@ void KmerAlignCore::AddData(const vecDNAVector & bases, const vecNumVector & tag
             if (!IsRepeat(t, k, size, min)) {
                 KmerAlignCoreRecordStoreTable & t = m_table; // not used?
                 int n = m_pTrans->BasesToNumber(b, k); // (bases, position_k): uniquely identifies a kmer
-                if (n >= 0)
-                    counts[n]++; // counting the kmer
+                if (n >= 0) {
+                    if (sparse)
+                        sparse_counts[n]++; // counting the kmer
+                    else
+                        counts[n]++; // counting the kmer
+                }
             }
             k++;
         }
@@ -88,6 +119,12 @@ void KmerAlignCore::AddData(const vecDNAVector & bases, const vecNumVector & tag
     cerr << endl;
     
     // ensure can hold matching positions for each of the kmer positions.
+    if (sparse) {
+        for (std::unordered_map<int, int>::iterator it = sparse_counts.begin(); it != sparse_counts.end(); ++it) {
+            m_table[it->first].Resize(it->second);
+            it->second = 0;
+        }
+    }
     for (j=0; j<counts.isize(); j++) {
         KmerAlignCoreRecordStoreTable & t = m_table;
         KmerAlignCoreRecordStore & s = t[j];
@@ -111,8 +148,9 @@ void KmerAlignCore::AddData(const vecDNAVector & bases, const vecNumVector & tag
                 int n = m_pTrans->BasesToNumber(b, k);
                 if (n >= 0) {
                     KmerAlignCoreRecordStore & s = t[n];
-                    s.Add(j, k, counts[n]); // for kmer (n), store contig (j) position (k) 'hit'
-                    counts[n]++; // if > 0, then have more than the self-match.
+                    int & c = sparse ? sparse_counts[n] : counts[n];
+                    s.Add(j, k, c); // for kmer (n), store contig (j) position (k) 'hit'
+                    c++; // if > 0, then have more than the self-match.
                 }
             }      
             k++;
@@ -145,12 +183,7 @@ void KmerAlignCore::AddData(const DNAVector & b, int contig, int offset, bool bS
 
 void KmerAlignCore::SortAll()
 {
-    int i, j;
-    KmerAlignCoreRecordStoreTable & t = m_table;
-    for (j=0; j<t.GetSize(); j++) {
-        KmerAlignCoreRecordStore & s = t[j];
-        s.Sort();    
-    }
+    m_table.SortAll();
 }
 
 const svec<KmerAlignCoreRecord> & KmerAlignCore::GetMatchesDirectly(const DNAVector & b, int start)
@@ -165,7 +198,7 @@ const svec<KmerAlignCoreRecord> & KmerAlignCore::GetMatchesDirectly(const DNAVec
         return dummy;
     }
     
-    KmerAlignCoreRecordStore & s = m_table[n];   
+    const KmerAlignCoreRecordStore & s = m_table.Lookup(n);
     return s.GetData();
 }
 
@@ -204,7 +237,7 @@ bool KmerAlignCore::GetMatches(svec<KmerAlignCoreRecord> & matches, const DNAVec
             // 12-mer lookups.  Try first 12-mer, then second 12-mer of the 24-mer.??
 
             if (n >= 0) {
-                KmerAlignCoreRecordStore & s = t[n];   
+                const KmerAlignCoreRecordStore & s = t.Lookup(n);   
                 if (s.GetNumRecords() > m_max12) {
                     matches.clear();
                     return false;
@@ -234,7 +267,7 @@ bool KmerAlignCore::GetMatches(svec<KmerAlignCoreRecord> & matches, const DNAVec
                 int n = m_pTrans->BasesToNumber(b, k + i * size + l);
                 
                 if (n > 0) {
-                    KmerAlignCoreRecordStore & s = t[n];   
+                    const KmerAlignCoreRecordStore & s = t.Lookup(n);   
                     
                     int count = r.GetSize();
                     if (l > 0)

@@ -5,6 +5,7 @@
 #define _KMERALIGNCORE_H_
 
 
+#include <unordered_map>
 #include "analysis/DNAVector.h"
 
 
@@ -209,7 +210,7 @@ class KmerAlignCoreRecordStore
  public:
   KmerAlignCoreRecordStore() {}
 
-  int GetNumRecords() {return m_data.isize();}
+  int GetNumRecords() const {return m_data.isize();}
 
   const KmerAlignCoreRecord & GetRecord(int i) const {return m_data[i];}
   
@@ -244,20 +245,78 @@ class KmerAlignCoreRecordStore
 class KmerAlignCoreRecordStoreTable
 {
  public:
+  KmerAlignCoreRecordStoreTable() : m_size(0), m_sparse(false), m_lazy(false) {}
+
   void SetSize(int i) {
+    m_size = i;
+    m_lazy = false;
+    m_sparse = false;
+    m_map.clear();
     m_table.resize(i);
   }
 
-  int GetSize() const {return m_table.isize();}
+  // Record the size but allocate nothing until Materialize(), so the caller can
+  // choose a sparse table when only a few k-mers will be stored.
+  void SetSizeLazy(int i) {
+    m_size = i;
+    m_lazy = true;
+  }
 
-  KmerAlignCoreRecordStore & operator[] (int i) {return m_table[i];}
-  const KmerAlignCoreRecordStore & operator[] (int i) const {return m_table[i];}
+  void Materialize(bool sparse) {
+    if (!m_lazy)
+      return;
+    m_lazy = false;
+    m_sparse = sparse;
+    if (!sparse)
+      m_table.resize(m_size);
+  }
 
-  
+  bool IsSparse() const {return m_sparse;}
+
+  int GetSize() const {return m_size;}
+
+  KmerAlignCoreRecordStore & operator[] (int i) {
+    if (m_lazy)
+      Materialize(false);
+    if (m_sparse)
+      return m_map[i];
+    return m_table[i];
+  }
+
+  // Read-only access: never inserts, so it is safe from concurrent threads.
+  const KmerAlignCoreRecordStore & Lookup(int i) const {
+    if (m_sparse || m_lazy) {
+      std::unordered_map<int, KmerAlignCoreRecordStore>::const_iterator it = m_map.find(i);
+      return it == m_map.end() ? Empty() : it->second;
+    }
+    return m_table[i];
+  }
+
+  const KmerAlignCoreRecordStore & operator[] (int i) const {return Lookup(i);}
+
+  void SortAll() {
+    if (m_sparse) {
+      for (std::unordered_map<int, KmerAlignCoreRecordStore>::iterator it = m_map.begin(); it != m_map.end(); ++it)
+        it->second.Sort();
+    } else {
+      for (int j=0; j<m_table.isize(); j++)
+        m_table[j].Sort();
+    }
+  }
 
  private:
+  static const KmerAlignCoreRecordStore & Empty() {
+    static const KmerAlignCoreRecordStore empty;
+    return empty;
+  }
+
+  int m_size;
+  bool m_sparse;
+  bool m_lazy;
   svec<KmerAlignCoreRecordStore> m_table;
+  std::unordered_map<int, KmerAlignCoreRecordStore> m_map;
 };
+
 
 
 
@@ -279,7 +338,7 @@ public:
 
   void SetTranslator(TranslateBasesToNumber * p) {
     m_pTrans = p;   
-    m_table.SetSize(m_pTrans->GetBoundValue());
+    m_table.SetSizeLazy(m_pTrans->GetBoundValue());
   }
 
   bool GetMatches(svec<KmerAlignCoreRecord> & matches, const DNAVector & b, int start = 0);
