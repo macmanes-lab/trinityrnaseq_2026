@@ -187,10 +187,11 @@ sub run {
                 confess "Error, cmd: $cmdstr died with ret $ret $!";
             }
             else {
-                `touch $checkpoint_file`;
-                if ($?) {
+                my $ckpt_ok = open(my $ckpt_fh, ">>", $checkpoint_file);
+                $ckpt_ok = $ckpt_ok && close($ckpt_fh) && utime(undef, undef, $checkpoint_file);
+                unless ($ckpt_ok) {
                     
-                    confess "Error creating checkpoint file: $checkpoint_file";
+                    confess "Error creating checkpoint file: $checkpoint_file: $!";
                 }
             }
 
