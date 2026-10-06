@@ -7,31 +7,76 @@ changed yet. This file is the analysis and plan.
 
 ## 1. How much time is at stake
 
-The SRR1789336 phase-1 run on Premise (`~/assemblies/TIME2_SRR1789336_norm_py_5050parallel.trinity`,
-Aug 19, `--CPU 20 --inchworm_cpu 10`), using file mtimes (start = mtime of
-`Trinity.timing`, so the first row is approximate):
+### Across ORP runs (213 logs)
 
-| stage | from | to | wall |
+Source: every per-sample log in Premise
+`/mnt/home/macmaneslab/macmanes/compare/orp_runs/logs/` (Sept-Oct 2026, bioconda
+`_6`, phase 1 at `--CPU 6` for 205 runs and `--CPU 10` for 8, alongside SPAdes on
+the same node). Stage boundaries come from Trinity's timestamped `CMD:` lines;
+normalization sub-steps from its `CMD finished (N seconds)` lines. Parsers and
+raw tables: `perf/phase1_timings.py`, `perf/norm_timings.py`, `perf/*.tsv`.
+
+Phase 1 wall: median 107 min, mean 133 min, max 771 min, 473 h total.
+
+| stage | median | p90 | share of phase 1 |
 | --- | --- | --- | --- |
-| in-silico normalization + fq->fa | 07:53 | 08:22 | ~29 min |
-| jellyfish count + dump + histo | 08:22 | 08:24 | ~2 min |
-| **Inchworm: load 117.6M k-mers** | 08:24 | 08:27 | **~3 min** |
-| **Inchworm: build contigs, write** | 08:27 | 08:29 | **~2 min** |
-| Chrysalis: bowtie2-build, bowtie2, scaffolding | 08:29 | 08:40 | ~11 min |
-| GraphFromFasta | 08:40 | 08:40 | <1 min |
-| ReadsToTranscripts | 08:40 | 08:54 | ~14 min |
-| sort + read partitioning | 08:54 | 08:58 | ~4 min |
+| **in-silico normalization** | 37.7 min | 84.3 min | **37.3%** |
+| **ReadsToTranscripts** (Chrysalis) | 31.5 min | 74.7 min | **29.2%** |
+| bowtie2-build + bowtie2 (iworm scaffolding) | 8.3 min | 22.8 min | 8.5% |
+| `scaffold_iworm_contigs.pl` | 6.0 min | 23.4 min | 7.9% |
+| **Inchworm** | 5.3 min | 13.6 min | **5.2%** |
+| GraphFromFasta | 4.0 min | 14.7 min | 4.8% |
+| read-partition `mkdir`s | 2.8 min | 8.9 min | 3.7% |
+| jellyfish (Trinity's own) | 2.5 min | 5.8 min | 2.2% |
+| everything else | | | <1.5% |
 
-Inchworm is about 5 of the ~65 phase-1 minutes on this (normalized) data set,
-and about 4% of a whole fork run (phase 2 is now 58 min). The ceiling for
-speed alone is therefore small here. It grows with input size: the hash map
-cost scales with distinct k-mers, which for un-normalized or larger libraries
-can be several times 117M, and memory (below) may matter more than time.
+Inside Inchworm: k-mer load 2.9% of phase 1 (median 185 s), contig building
+1.1%, pruning 0.5%.
 
-Before writing code, get a real breakdown: rerun Inchworm alone on
-`jellyfish.kmers.25.asm.fa` (3.4 GB, still on Premise) with the exact phase-1
-command, under `/usr/bin/time -v`, at 1, 6, 10 and 20 threads. Its stderr
-prints `TIMING KMER_DB_BUILDING` and the contig-assembly time.
+Inside normalization (177 h in total):
+
+| sub-step | share of normalization | share of phase 1 |
+| --- | --- | --- |
+| **`fastaToKmerCoverageStats`** (Inchworm repo) | 25.1% | 9.4% |
+| read capture (Perl, after `nbkc_normalize.pl`) | 22.5% | 8.4% |
+| `nbkc_merge_left_right_stats.pl` (Perl, 1 thread) | 20.6% | 7.7% |
+| `nbkc_normalize.pl` (Perl, 1 thread) | 12.9% | 4.8% |
+| jellyfish count / dump / histo | 14.6% | 5.5% |
+| seqtk fq->fa, sort, cat | 4.3% | 1.6% |
+
+Normalization time correlates with input reads at r = 0.99. ReadsToTranscripts
+and bowtie2 correlate with the reads that survive normalization (r = 0.93,
+0.92).
+
+### What this means for this branch
+
+The Inchworm k-mer code (`KmerCounter`, `Fasta_reader`, the jellyfish-dump
+loader) is used by two programs: `inchworm` (5.2% of phase 1) and
+`fastaToKmerCoverageStats` (9.4%). So the realistic target is about **15% of
+phase 1**, not 5%. Add the stats sort and the Perl merge, which only exist
+because left and right stats are made separately, and about **25% of phase 1**
+lives in code this repo owns or could absorb.
+
+`fastaToKmerCoverageStats` specifically:
+
+- It is run **twice in parallel, once per mate file**, and each run loads the
+  **whole** k-mer table (82M k-mers, ~168 s, for SRR1789336): twice the load
+  work and twice the memory.
+- `MAX_THREADS = 6` is hard-coded; `--num_threads` above that is ignored.
+- Per read: `substr` per k-mer, string-based `contains_non_gatc` and
+  encoding, a revcomp loop per lookup, a `stringstream` per output line and a
+  global critical section for `cout`.
+- Its two outputs are then sorted by read name and joined by
+  `nbkc_merge_left_right_stats.pl` (20.6% of normalization). A single
+  invocation that takes both mate files, streams pairs together and writes
+  the merged pair stats directly would remove the second load, both sorts and
+  the merge script. Output must match `pairs.K25.stats` exactly
+  (normalization selects reads from it).
+
+Single-run example (SRR1789336, 2026-10-01): normalization 35 min =
+fastaToKmerCoverageStats 572 s, merge 406 s, `nbkc_normalize.pl` 260 s,
+capture ~490 s, jellyfish 285 s, seqtk 64 s; Inchworm 344 s (load 227,
+prune 40, build 50).
 
 ## 2. How Trinity runs Inchworm
 
@@ -131,22 +176,29 @@ the serial, sorted path if ties in the sort are broken deterministically
 
 Items 1-2 address the 3-minute load and most of the memory; 3-4 address the
 2-minute build. Expected gain on SRR1789336: roughly 5 min -> 1-2 min of
-Inchworm, i.e. a few minutes off phase 1. The memory reduction (~5-6 GB ->
+Inchworm. The memory reduction (~5-6 GB ->
 ~1.5 GB) is probably the more useful result for big libraries.
 
 ## 6. Not Inchworm, but noticed while measuring
 
-On this run normalization takes ~29 min, the largest single phase-1 stage,
-and ReadsToTranscripts + Chrysalis bowtie2 take another ~25 min. If the goal
-is phase-1 wall time, those are bigger targets than Inchworm. (ORP already
-normalizes its input; check whether Trinity's own `--normalize_reads` pass is
-redundant for ORP runs, i.e. whether `--no_normalize_reads` is safe there.)
+- **ReadsToTranscripts (29% of phase 1)** is Chrysalis: the next target on
+  `chrysalis-2026`.
+- **Normalization Perl** (`nbkc_normalize.pl` and read capture, ~13% of phase
+  1) is in the Trinity repo. ORP's `--normalize-reads` is this Trinity
+  normalization (ORP does not normalize separately), so it is not redundant.
+- **Read-partition `mkdir`s** (3.7%): one `mkdir -p` shell-out per bin at
+  ~0.34 s each. A Trinity-side fix (Perl `make_path`, or create bins lazily).
 
 ## 7. Next steps
 
-1. On Premise: timing breakdown of stock Inchworm (section 1) and the
-   determinism check (section 4).
-2. Decide whether the few-minute gain plus memory is worth it, versus
-   normalization or ReadsToTranscripts.
-3. If yes: implement 1-4 on this branch, validate per section 4, then point
-   the Trinity fork's Inchworm submodule at `inchworm-2026`.
+1. Determinism check on Premise (section 4): stock `inchworm` twice at 10
+   threads, and stock `fastaToKmerCoverageStats` twice (its output order
+   depends on threads, but sorted output should be identical).
+2. Shared k-mer layer first (items 1-3 in section 5). Both `inchworm` and
+   `fastaToKmerCoverageStats` benefit.
+3. Paired `fastaToKmerCoverageStats` mode that writes `pairs.K25.stats`
+   directly, plus the matching change to `insilico_read_normalization.pl`
+   (Trinity repo). Validate with an identical `pairs.K25.stats` and an
+   identical selected-read list.
+4. Then the Inchworm contig-building items, validated per section 4.
+5. Point the Trinity fork's Inchworm submodule at `inchworm-2026`.
