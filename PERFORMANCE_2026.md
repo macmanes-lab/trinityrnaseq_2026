@@ -130,6 +130,8 @@ Sample, 1,500 components, 38 slots:
 
 ## Using it
 
+Step by step, including patching ORP's env: [INSTALL.md](INSTALL.md).
+
 Needs what Trinity 2.15.2 needs: a C++ compiler with OpenMP, cmake, make,
 Perl, Python 3, Java 8 or later, and jellyfish 2, bowtie2, samtools (1.3 or
 later) and salmon on `PATH` at run time.
