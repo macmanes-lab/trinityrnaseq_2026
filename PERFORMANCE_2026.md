@@ -130,17 +130,31 @@ Sample, 1,500 components, 38 slots:
 
 ## Using it
 
-Build:
+Needs what Trinity 2.15.2 needs: a C++ compiler with OpenMP, cmake, make,
+Perl, Python 3, Java 8 or later, and jellyfish 2, bowtie2, samtools (1.3 or
+later) and salmon on `PATH` at run time.
 
     git clone --recursive https://github.com/macmanes-lab/trinityrnaseq_2026.git
-    cd trinityrnaseq_2026 && make && make plugins
+    cd trinityrnaseq_2026
+    make -j 8                  # or: make -j 8 no_bamsifter
+    nm -D trinity-plugins/BIN/ParaFly | grep -c GOMP_    # must not be 0
 
-(bamsifter, used only by genome-guided mode, needs autoheader to build.)
-Check `nm -D trinity-plugins/BIN/ParaFly | grep -c GOMP_` is non-zero.
+`make` also builds bamsifter, used only by genome-guided runs, which needs
+autoconf's `autoheader`; where that is missing, `make no_bamsifter` builds
+everything else. Then run `./Trinity` from the checkout as usual; check with
 
-Or patch an existing bioconda install in place, with a backup:
+    cd sample_data/test_Trinity_Assembly
+    ../../Trinity --seqType fq --left reads.left.fq.gz --right reads.right.fq.gz \
+        --SS_lib_type RF --max_memory 4G --CPU 8 --output /tmp/test_trinity
 
-    SRC=$PWD perf2026/install_into_env.sh parafly $CONDA_PREFIX/bin   # ParaFly only
+New knobs: `--bfly_full_jit` gives Butterfly the JVM's full JIT again (the
+default is now C1 only); `CHRYSALIS_KMER_TABLE=dense|sparse` forces
+GraphFromFasta's k-mer table.
+
+Or patch an existing install, such as a bioconda env, in place with a
+backup:
+
+    SRC=$PWD perf2026/install_into_env.sh parafly $CONDA_PREFIX/bin   # ParaFly only, output unchanged
     SRC=$PWD perf2026/install_into_env.sh full    $CONDA_PREFIX/bin   # everything
     perf2026/install_into_env.sh restore $CONDA_PREFIX/bin
 
