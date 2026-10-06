@@ -1,0 +1,6 @@
+# id	read1	read2   (ORP-corrected reads; edit to choose other samples, then set --array to match)
+ERR1674585	/mnt/home/macmaneslab/macmanes/compare/orp_runs/ERR1674585/rcorr/ERR1674585.TRIM_1P.cor.fq.gz	/mnt/home/macmaneslab/macmanes/compare/orp_runs/ERR1674585/rcorr/ERR1674585.TRIM_2P.cor.fq.gz
+SRR1789336	/mnt/home/macmaneslab/macmanes/compare/orp_runs/SRR1789336/rcorr/SRR1789336.TRIM_1P.cor.fq.gz	/mnt/home/macmaneslab/macmanes/compare/orp_runs/SRR1789336/rcorr/SRR1789336.TRIM_2P.cor.fq.gz
+ERR058009	/mnt/home/macmaneslab/macmanes/compare/orp_runs/ERR058009/rcorr/ERR058009.TRIM_1P.cor.fq.gz	/mnt/home/macmaneslab/macmanes/compare/orp_runs/ERR058009/rcorr/ERR058009.TRIM_2P.cor.fq.gz
+ERR1016675	/mnt/home/macmaneslab/macmanes/compare/orp_runs/ERR1016675/rcorr/ERR1016675.TRIM_1P.cor.fq.gz	/mnt/home/macmaneslab/macmanes/compare/orp_runs/ERR1016675/rcorr/ERR1016675.TRIM_2P.cor.fq.gz
+DRR046632	/mnt/home/macmaneslab/macmanes/compare/orp_runs/DRR046632/rcorr/DRR046632.TRIM_1P.cor.fq.gz	/mnt/home/macmaneslab/macmanes/compare/orp_runs/DRR046632/rcorr/DRR046632.TRIM_2P.cor.fq.gz
