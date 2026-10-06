@@ -12,4 +12,4 @@ mkdir -p "$OUTROOT/logs"
 grep -v '^#' "$HERE/samples.tsv" | grep . | while IFS=$'\t' read -r id r1 r2; do
     for f in "$r1" "$r2"; do [ -f "$f" ] || { echo "missing: $f" >&2; exit 1; }; done
 done
-sbatch --array="$RANGE" --export=ALL,TRINITY_SRC="$(cd "$HERE/.." && pwd)" "$HERE/trinity_standalone.sbatch"
+sbatch --array="$RANGE" --export=ALL,TRINITY_SRC="${TRINITY_SRC:-$(cd "$HERE/.." && pwd)}" "$HERE/trinity_standalone.sbatch"
