@@ -28,7 +28,7 @@ with Trinity's default normalization and `--inchworm_cpu 10`:
 
 Each stage is timed separately.
 
-**Resources.** One exclusive 40-core node per sample (`--mem=0`, Trinity
+**Resources.** 40 cores and 700G per sample (not an exclusive node; Trinity
 `--max_memory 600G`). ORP gave each phase a share of a node, shared with SPAdes
 (phase 1) and Trans-ABySS (phase 2), and ran phase 2 on bioconda's serial
 ParaFly. So phase 1 is not like for like. The CPU counts are recorded in the

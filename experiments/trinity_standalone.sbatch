@@ -1,11 +1,8 @@
 #!/bin/bash
-#SBATCH --partition=macmanes
+#SBATCH --partition=macmanes,shared
 #SBATCH -J trin_sa
-#SBATCH --nodes=1
 #SBATCH --cpus-per-task=40
-#SBATCH --exclusive
-#SBATCH --mem=0
-#SBATCH --time=7-00:00:00
+#SBATCH --mem=700G
 #SBATCH --array=1-5
 #SBATCH --output=/mnt/home/macmaneslab/macmanes/compare/trinity_standalone/logs/trin_%A_%a.log
 #
@@ -21,7 +18,7 @@
 #   phase 2  Trinity ... --full_cleanup                  (per-component, ParaFly)
 # The difference is resources: ORP gives phase 1 a share of the node, shared
 # with SPAdes, and phase 2 a share shared with Trans-ABySS. Here each phase
-# gets the whole exclusive node, so compare phase 2 mainly, and note CPU counts
+# gets 40 cores (the node may be shared with other jobs), so compare phase 2 mainly, and note CPU counts
 # (recorded in the timing file).
 #
 # Environment overrides: TRINITY_SRC, TOOLS_ENV, OUTROOT, MEM, CPU, SAMPLES, TAG.
