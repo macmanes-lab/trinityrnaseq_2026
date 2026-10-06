@@ -10,7 +10,8 @@
 	url = https://github.com/trinityrnaseq/Inchworm.git
 [submodule "Chrysalis"]
 	path = Chrysalis
-	url = https://github.com/trinityrnaseq/Chrysalis.git
+	url = https://github.com/macmanes-lab/trinityrnaseq_2026.git
+	branch = chrysalis-2026
 
 [submodule "trinity-plugins/seqtk-trinity"]
 	path = trinity-plugins/seqtk-trinity
@@ -23,4 +24,5 @@
 	url = https://github.com/samtools/htslib.git
 [submodule "Butterfly/Butterfly"]
 	path = Butterfly/Butterfly
-	url = https://github.com/trinityrnaseq/Butterfly.git
+	url = https://github.com/macmanes-lab/trinityrnaseq_2026.git
+	branch = butterfly-2026
