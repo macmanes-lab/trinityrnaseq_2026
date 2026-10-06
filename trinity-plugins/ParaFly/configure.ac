@@ -1,5 +1,8 @@
 AC_INIT([Parafly], [0.1], [bug-report@address])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
+# no automake rebuild rules: a fresh clone gives configure.ac and the
+# generated files arbitrary mtimes, and make would then need automake
+AM_MAINTAINER_MODE
 AC_LANG([C++])
 AC_PROG_CXX
 # AC_OPENMP compiles its probe with LDFLAGS, so -fopenmp there (as conda
