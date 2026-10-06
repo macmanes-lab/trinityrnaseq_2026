@@ -1,5 +1,7 @@
 # Trinity phase 2 performance, 2026
 
+> **Development version.** This fork is an experimental, in-progress effort to make Trinity faster. It is not an official Trinity release, and nothing in it has been accepted upstream yet. For production assemblies use the official release.
+
 This fork of trinityrnaseq/trinityrnaseq (v2.15.2, upstream 653e43a) holds
 fixes that take Trinity's phase 2 (the per-component assemblies run through
 ParaFly) from 34 h to under 1 h on a 40-core node, plus the reproducibility

@@ -1,5 +1,7 @@
 # Installing trinityrnaseq_2026
 
+> **Development version.** This fork is an experimental, in-progress effort to make Trinity faster. It is not an official Trinity release, and nothing in it has been accepted upstream yet. For production assemblies use the official release.
+
 Tested 2026-10-05 on Premise: a fresh clone built cleanly, and a full Trinity
 run on the bundled sample data succeeded (exit 0, 77 transcripts, 16 s).
 
@@ -20,7 +22,9 @@ git clone --recursive https://github.com/macmanes-lab/trinityrnaseq_2026.git
 
 `.gitmodules` points Chrysalis at branch `chrysalis-2026` and Butterfly at
 `butterfly-2026` of this repository. For an existing clone, run
-`git pull && git submodule update --init --recursive` instead.
+`git pull && git submodule sync --recursive && git submodule update --init --recursive` instead.
+If `make` stops with "No targets specified and no makefile found" in `Chrysalis` or
+`Inchworm`, the submodules were not checked out; run that same command.
 
 ## 2. Build
 
