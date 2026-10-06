@@ -4,7 +4,7 @@ Start here when you pick this up, on any machine. Read this file, then
 [PERFORMANCE_2026.md](PERFORMANCE_2026.md) for the findings and evidence, and
 [INSTALL.md](INSTALL.md) to build or deploy.
 
-Last updated 2026-10-06.
+Last updated 2026-10-06 (standalone-vs-ORP timings added).
 
 ---
 
@@ -51,6 +51,7 @@ ORP still runs stock bioconda `_6`, because no ORP change has been made.
 | `master` | upstream v2.15.2 (`653e43a`) + the Trinity-side commits below + docs + `perf2026/` |
 | `chrysalis-2026` | Chrysalis with the sparse k-mer table (the Chrysalis submodule points here) |
 | `butterfly-2026` | Butterfly from upstream **`devel`** + reproducible hash codes + debug-message guard (the Butterfly submodule points here) |
+| `inchworm-2026` | Inchworm (upstream `master` + 2 doc-only commits: `INCHWORM_2026.md`, phase-1 timing, hot spots and a plan, from 213 ORP runs). **No code changes yet.** The Inchworm submodule on `master` still points at upstream `c985c90`; to work on Inchworm, `git -C Inchworm fetch git@github.com:macmanes-lab/trinityrnaseq_2026.git inchworm-2026` and check it out. Repoint `.gitmodules` (as was done for Chrysalis/Butterfly) only if you start changing code |
 
 Commits on `master` since upstream, oldest first:
 
@@ -74,6 +75,7 @@ Commits on `master` since upstream, oldest first:
 | `PERFORMANCE_2026.md` | write-up: causes, measurements, validation, upstream to-do |
 | `INSTALL.md` | tested build/install steps, including patching ORP's env |
 | `perf2026/install_into_env.sh` | overlays a built checkout onto an existing (bioconda) Trinity, with backup and `restore` |
+| `experiments/` | Slurm scripts timing standalone fork Trinity against ORP's Trinity step; results in `experiments/results/` (see section 8) |
 | `perf2026/harness/` | replay harness and experiment scripts (see section 5) |
 | `perf2026/patches/0001-prof-*.patch` | opt-in per-command timing log (`TRINITY_PROF_LOG`), deliberately **not** on master |
 
@@ -91,7 +93,7 @@ Commits on `master` since upstream, oldest first:
 | `~/trinity_eng/patches/` | old `format-patch` output, superseded by the fork's commits |
 | `~/assemblies/TIME2_SRR1789336_norm_py_5050parallel.trinity/` | phase-1 output used as replay input (`recursive_trinity.cmds`, read partitions) |
 | `~/orp_envs/orp_trinity` | ORP's Trinity env (bioconda `_6`, serial ParaFly), **unmodified** |
-| `~/trinityrnaseq_2026` | an older, unbuilt clone; pull and build it, or ignore it |
+| `~/trinityrnaseq_2026` | built clone of this fork (master `4599e21`); the `experiments/` scripts run from here (ParaFly rebuild shows as local modifications; ignore) |
 
 ### Elsewhere
 
@@ -263,9 +265,41 @@ JIT experiments.
 
 Newest first. Add an entry when you change the state above.
 
+- **2026-10-06 (later):** standalone fork Trinity run on 5 ORP-corrected
+  samples (jobs 1320555 tasks 1-3, 1320560 tasks 4-5; all exit 0); results in
+  section 8 and `experiments/results/`. `inchworm-2026` branch pushed.
+
 - **2026-10-06:** this handoff doc (replaces `NOTES_2026.md`).
 - **2026-10-05:** work moved here from the ORP repo
   (`experiments/trinity_phase2/`). INSTALL.md added and tested on Premise.
   Full replay: base5 2h06m, perf5 58m, 66,440/66,440 identical. Serial
   ParaFly in bioconda `_4`-`_6` found and confirmed (34h27m -> 2h03m with
   OpenMP).
+
+---
+
+## 8. Standalone fork vs ORP's Trinity step (2026-10-06)
+
+Fork (`4599e21`, OpenMP ParaFly) on 40 cores, run from `experiments/` on the
+ORP-corrected reads, against the Trinity times in the ORP logs. Full table:
+`experiments/results/comparison.tsv`; raw rows: `experiments/results/timings.tsv`.
+
+| sample | ORP p1 h | ORP p2 h | ORP total h | fork total h | p2 speedup | total speedup |
+| --- | --- | --- | --- | --- | --- | --- |
+| ERR058009 | 1.11 | 5.11 | 6.22 | 1.02 | 34.3x | 6.1x |
+| ERR1674585 | 0.93 | 37.72 | 38.65 | 1.93 | 32.5x | 20.0x |
+| SRR1789336 | 1.60 | 38.92 | 40.52 | 2.22 | 38.5x | 18.3x |
+| ERR1016675 | 2.15 | 28.76 | 30.91 | 2.40 | 29.8x | 12.9x |
+| DRR046632 | 2.42 | 33.28 | 35.70 | 2.67 | 39.5x | 13.4x |
+
+- Phase 2 gains (30-40x) are real and like for like in effect (serial vs
+  OpenMP ParaFly plus per-component overhead). Phase 1 is **not** like for like:
+  ORP gave it 10 cores (6 for DRR046632) shared with SPAdes; the fork had 40.
+- Slurm `MaxRSS` was ~123 GiB for 4 of 5 runs (ERR1674585 reported 10 GiB, not
+  investigated, probably a missed child process). Peak well under 350G.
+- Job map: 1320555_1 ERR1674585, _2 SRR1789336, _3 ERR058009; 1320560_4
+  ERR1016675, _5 DRR046632. Tasks 4-5 were resubmitted with `--mem=350G`
+  because no idle node had 700G free; `trinity_standalone.sbatch` still says
+  700G. `compare_timings.py` reads `timings.tsv`, so job IDs do not matter to it.
+- Not yet done: a same-core-count phase-1 comparison, and running stock Trinity
+  (`TAG=stock TRINITY_SRC=... ./submit.sh`) as a third arm.

@@ -81,3 +81,10 @@ are told apart in `timings.tsv`:
 ```bash
 TAG=stock TRINITY_SRC=/path/to/other/trinity ./submit.sh
 ```
+
+## Results
+
+First run (2026-10-06, fork `4599e21`): `results/timings.tsv` and
+`results/comparison.tsv` (copies of the Premise outputs). Summary and caveats
+are in [HANDOFF.md](../HANDOFF.md) section 8. Total time was 6-20x lower than
+ORP's, phase 2 30-40x lower.
