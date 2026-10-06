@@ -171,6 +171,26 @@ backup:
   java and python call; `analyze.py` summarizes a run.
 - `build_bfly.sh` builds `Butterfly.jar` from source; `guard_debug.py` is the
   mechanical rewrite behind the debug-message change.
+- `stable_hash.py` (with `StableHash.java`) is the mechanical rewrite behind
+  the first version of the reproducible-hash change.
 - `pf_fix_test.sh` reproduces the ParaFly configure bugs and the fix.
 - `isolate.sh`, `envtest2.sh`, `bisect_guard.sh`, `heavy_jit.sh` are the
   Butterfly determinism and JIT experiments.
+
+## Upstream to-do
+
+1. **bioconda-recipes `recipes/trinity`** (affects every bioconda Trinity
+   install since May 2025): in `makefile.patch` give ParaFly
+   `CFLAGS="${CFLAGS} -fopenmp" CXXFLAGS="${CXXFLAGS} -fopenmp"`, bump the
+   build number, and add a test that fails on a serial ParaFly
+   (`nm -D $PREFIX/bin/trinity-plugins/BIN/ParaFly | grep -q GOMP_`, or two
+   `sleep 1` commands at `-CPU 2` finishing in under ~1.8 s).
+2. **trinityrnaseq**: the det-fix, C1 JIT, numpy-free polish, fewer-processes
+   and ParaFly commits; independent of each other except that the JIT flag
+   lives in the Trinity script. Also point the Butterfly submodule at the
+   commit the jar is built from.
+3. **trinityrnaseq/Chrysalis**: the sparse k-mer table (`chrysalis-2026`).
+   **trinityrnaseq/Butterfly** (`devel`): reproducible hash codes and the
+   debug-message change (`butterfly-2026`), then a jar rebuild.
+4. Seen in passing: `Analysis/SuperTranscripts/pylib` has non-raw regex
+   strings that Python 3.14 warns about and a later Python will reject.
