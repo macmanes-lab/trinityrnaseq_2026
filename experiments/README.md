@@ -11,6 +11,7 @@ timings, to compare with the Trinity step of the Oyster River Protocol (ORP).
 | `trinity_standalone.sbatch` | array job, one task per line of `samples.tsv` |
 | `submit.sh` | makes the log directory, checks the reads exist, submits |
 | `compare_timings.py` | standalone timings next to ORP's, from the logs |
+| `fork_vs_stock.sbatch` | fork and stock Trinity one after the other on one node, on one ORP run's corrected reads |
 
 ## What is run
 
@@ -88,3 +89,8 @@ First run (2026-10-06, fork `4599e21`): `results/timings.tsv` and
 `results/comparison.tsv` (copies of the Premise outputs). Summary and caveats
 are in [HANDOFF.md](../HANDOFF.md) section 8. Total time was 6-20x lower than
 ORP's, phase 2 30-40x lower.
+
+Fork vs stock Trinity (OpenMP ParaFly) on one node (2026-10-13, SRR1138704,
+`fork_vs_stock.sbatch`): phase 2 2.16x faster, phase 1 unchanged, Trinity
+total 1.6x faster; assemblies equivalent. See
+[results/fork_vs_stock_SRR1138704.md](results/fork_vs_stock_SRR1138704.md).
